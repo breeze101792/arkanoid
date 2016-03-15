@@ -88,7 +88,6 @@ GAME_Update()
 {
 	//Player1
 	LCD_SetTextColor( LCD_COLOR_BLACK );
-//	LCD_DrawFullRect( player1X, player1Y, player1W, player1H );
 	LCD_DrawFullRect( player2X, player2Y, player2W, player2H );
 
 	//Bricks init
@@ -197,6 +196,7 @@ GAME_Update()
 GAME_Render()
 {
 	LCD_SetTextColor( LCD_COLOR_BLACK );
+	LCD_DrawCircle( ballX, ballY, ballRadius);
 	for (uint16_t i = 0; i < 24;i++){
 		for (uint16_t j = 0; j < 16;j++){
 			if (!(bricks[i] & (1 << j))){
