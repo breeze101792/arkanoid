@@ -1,4 +1,4 @@
-PROJECT = usart1
+PROJECT = arkanoid
 
 EXECUTABLE = $(PROJECT).elf
 BIN_IMAGE = $(PROJECT).bin
