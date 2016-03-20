@@ -1,4 +1,4 @@
-PROJECT = arkanoid
+PROJECT = racing
 
 EXECUTABLE = $(PROJECT).elf
 BIN_IMAGE = $(PROJECT).bin
