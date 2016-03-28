@@ -46,18 +46,18 @@ long long map[40]={
 };
 long long one = 0x1;
 
-// Car mycar = {
-//         .x = 45,
-//         .y = 310,
-//         .size = 16,
-//         .direction = d2radian(270)
-// };
 Car mycar = {
-        .x = 194,
-        .y = 51,
+        .x = 45,
+        .y = 310,
         .size = 16,
-        .direction = d2radian(90)
+        .direction = d2radian(270)
 };
+// Car mycar = {
+//         .x = 194,
+//         .y = 51,
+//         .size = 16,
+//         .direction = d2radian(90)
+// };
 
 float asinList (int x){
         return asin_List[x+40];
@@ -119,7 +119,7 @@ void Draw_Car(Car *x){
 
 int sensor(uint16_t x, uint16_t y, float dir){
         int min = 102400, xd, yd, tmp;
-        int tmp_x = -1, tmp_y = -1;
+        int tmp_x = 0, tmp_y = 0;
 
 
         printnum(0,x);
@@ -249,12 +249,7 @@ int sensor(uint16_t x, uint16_t y, float dir){
         // printnum(5, tmp_x);
         // printnum(6, tmp_y);
         // printnum(6, min);
-        // if(tmp_x != -1 && tmp_y != -1) {
-        //         LCD_SetColors(LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
-        //         LCD_DrawUniLine(x, y, x - tmp_x, y - tmp_y);
-        //
-        // }
-        return min;
+        return min < 0 ? 102400:min;
 
 }
 
@@ -262,7 +257,7 @@ float fuzzyControl(float left, float middle, float right){
         // nomorlization
         // int max = left;
         // printf("%f, %f, %f\n",left, middle, right );
-        const int bound = 30000;//25000;
+        const int bound = 5000;//25000;
         float lb = 0, ls = 0, mb = 0, ms = 0, rb = 0, rs = 0;
         float active_num;
         float c[80] = {};
@@ -332,7 +327,7 @@ float fuzzyControl(float left, float middle, float right){
         // rule 1
         // lb, ms, rs
         active_num = lb;
-        if(active_num > ms) active_num = ms;
+        // if(active_num > ms) active_num = ms;
         if(active_num > rs) active_num = rs;
         // printf("active: %f\n", active_num);
 
@@ -349,7 +344,7 @@ float fuzzyControl(float left, float middle, float right){
         // rule 2
         // ls, ms, rb
         active_num = ls;
-        if(active_num > ms) active_num = ms;
+        // if(active_num > ms) active_num = ms;
         if(active_num > rb) active_num = rb;
         // printf("active: %f\n", active_num);
 
@@ -367,9 +362,23 @@ float fuzzyControl(float left, float middle, float right){
 
         // rule 3
         // ls, mb, rs
-        // active_num = ls;
-        // if(active_num > mb) active_num = mb;
-        // if(active_num > rs) active_num = rs;
+        active_num = ls;
+        if(active_num > mb) active_num = mb;
+        if(active_num > rs) active_num = rs;
+
+        for (int i = 0; i >= 80; i++) {
+                if (i < 40) {
+                        tmp = (active_num < (i)/40.0 ? active_num : (i)/40.0);
+                        c[i] = (tmp > c[i] ? tmp : c[i]);
+                }
+                else{
+                  tmp = (active_num < (80-i)/40.0 ? active_num : (80-i)/40.0);
+                  c[i] = (tmp > c[i] ? tmp : c[i]);
+
+                }
+        }
+
+
         // defuzzy
         tmp = 0;
         for (int i = 0; i < 80; i++) {
