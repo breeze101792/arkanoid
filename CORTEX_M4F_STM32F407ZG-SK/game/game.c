@@ -14,24 +14,26 @@
 #define carSize 3
 
 #define d2radian(x) 0.0174533 * x
-
+static float buf_tmp;
 // #define xtranslate(x) x * 6
 // #define ytranslate(y) (LCD_PIXEL_HEIGHT - y * 6)
 // #define scaler(x) x * 6
-
 typedef struct Car {
         float x;
         float y;
+        uint8_t size;
         float x_old;
         float y_old;
-        uint8_t size;
         float direction;
         float direction_old;
+        float theta;
         uint8_t sensor_left;
+        uint8_t sensor_middle;
         uint8_t sensor_right;
         uint8_t lock;
 } Car;
 
+float asin_List[81] = {-0.035718, -0.034969, -0.034210, -0.033440, -0.032661, -0.031871, -0.031071, -0.030262, -0.029444, -0.028617, -0.027781, -0.026937, -0.026085, -0.025224, -0.024356, -0.023481, -0.022598, -0.021709, -0.020813, -0.019911, -0.019002, -0.018088, -0.017168, -0.016244, -0.015314, -0.014379, -0.013441, -0.012498, -0.011551, -0.010601, -0.009647, -0.008691, -0.007732, -0.006771, -0.005807, -0.004842, -0.003875, -0.002908, -0.001939, -0.000970, 0.000000, 0.000970, 0.001939, 0.002908, 0.003875, 0.004842, 0.005807, 0.006771, 0.007732, 0.008691, 0.009647, 0.010601, 0.011551, 0.012498, 0.013441, 0.014379, 0.015314, 0.016244, 0.017168, 0.018088, 0.019002, 0.019911, 0.020813, 0.021709, 0.022598, 0.023481, 0.024356, 0.025224, 0.026085, 0.026937, 0.027781, 0.028617, 0.029444, 0.030262, 0.031071, 0.031871, 0.032661, 0.033440, 0.034210, 0.034969, 0.035718, 0.036456, 0.037182, 0.037898, 0.038602, 0.039294, 0.039974, 0.040642, 0.041298, 0.041941, 0.042571, 0.043188, 0.043792, 0.044383, 0.044961, 0.045524, 0.046074, 0.046610, 0.047131, 0.047638, 0.048131, 0.048609, 0.049072, 0.049521, 0.049954, 0.050372, 0.050774, 0.051161, 0.051533, 0.051889, 0.052229, 0.052553, 0.052861, 0.053153, 0.053429, 0.053688, 0.053931, 0.054158, 0.054368, 0.054562, 0.054739 };
 long long map[40]={
         0x0,0x0,0xFFFFFF000000,0x000001000000,0x000001000000,
         0x000001000000,0x000001000000,0x000001000000,0x000001000000,0x000001000000,
@@ -44,14 +46,22 @@ long long map[40]={
 };
 long long one = 0x1;
 
+// Car mycar = {
+//         .x = 45,
+//         .y = 310,
+//         .size = 16,
+//         .direction = d2radian(270)
+// };
 Car mycar = {
-        .x = 50,
-        .y = 314,
+        .x = 194,
+        .y = 51,
         .size = 16,
-        .direction = d2radian(225)
+        .direction = d2radian(90)
 };
 
-
+float asinList (int x){
+        return asin_List[x+40];
+}
 char* itoa(int i, char b[]){
         char const digit[] = "0123456789";
         char* p = b;
@@ -143,8 +153,8 @@ int sensor(uint16_t x, uint16_t y, float dir){
                         tmp_x = xd, tmp_y = yd;
                 }
 
-                //LCD_SetColors(LCD_COLOR_RED, LCD_COLOR_BLACK);
-                //LCD_DrawUniLine(x, y, x - tmp_x, y + tmp_y);
+                // LCD_SetColors(LCD_COLOR_RED, LCD_COLOR_BLACK);
+                // LCD_DrawUniLine(x, y, x - tmp_x, y + tmp_y);
         }
         else if(dir <= 3.14159) {
                 xd = 84 - x;
@@ -171,8 +181,8 @@ int sensor(uint16_t x, uint16_t y, float dir){
                         tmp_x = xd, tmp_y = yd;
 
                 }
-                //LCD_SetColors(LCD_COLOR_BLUE, LCD_COLOR_BLACK);
-                //LCD_DrawUniLine(x, y, x + tmp_x, y + tmp_y);
+                // LCD_SetColors(LCD_COLOR_BLUE, LCD_COLOR_BLACK);
+                // LCD_DrawUniLine(x, y, x + tmp_x, y + tmp_y);
         }
         else if(dir <= 4.71239) {
                 xd = 84 - x;
@@ -201,8 +211,8 @@ int sensor(uint16_t x, uint16_t y, float dir){
                         tmp_x = xd, tmp_y = yd;
 
                 }
-                //LCD_SetColors(LCD_COLOR_GREEN, LCD_COLOR_BLACK);
-                //LCD_DrawUniLine(x, y, x + tmp_x, y - tmp_y);
+                // LCD_SetColors(LCD_COLOR_GREEN, LCD_COLOR_BLACK);
+                // LCD_DrawUniLine(x, y, x + tmp_x, y - tmp_y);
         }
         else{
                 xd = x - 18;
@@ -232,13 +242,151 @@ int sensor(uint16_t x, uint16_t y, float dir){
                         tmp_x = xd, tmp_y = yd;
 
                 }
-                //LCD_SetColors(LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
-                //LCD_DrawUniLine(x, y, x - tmp_x, y - tmp_y);
+                // LCD_SetColors(LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
+                // LCD_DrawUniLine(x, y, x - tmp_x, y - tmp_y);
 
         }
-
+        // printnum(5, tmp_x);
+        // printnum(6, tmp_y);
+        // printnum(6, min);
+        // if(tmp_x != -1 && tmp_y != -1) {
+        //         LCD_SetColors(LCD_COLOR_YELLOW, LCD_COLOR_BLACK);
+        //         LCD_DrawUniLine(x, y, x - tmp_x, y - tmp_y);
+        //
+        // }
         return min;
+
 }
+
+float fuzzyControl(float left, float middle, float right){
+        // nomorlization
+        // int max = left;
+        // printf("%f, %f, %f\n",left, middle, right );
+        const int bound = 30000;//25000;
+        float lb = 0, ls = 0, mb = 0, ms = 0, rb = 0, rs = 0;
+        float active_num;
+        float c[80] = {};
+
+        // left
+        if(left > bound) {
+                lb = 1;
+        }
+        else if(left <= 0) {
+                lb = 0;
+        }
+        else{
+                lb = left / bound;
+        }
+
+        if(left > bound) {
+                ls = 0;
+        }
+        else if(left <= 0) {
+                ls = 1;
+        }
+        else{
+                ls = -left / bound + 1;
+        }
+        // middle
+
+        if(middle > bound) {
+                mb = 1;
+        }
+        else if(middle <= 0) {
+                mb = 0;
+        }
+        else{
+                mb = middle / bound;
+        }
+
+        if(middle > bound) {
+                ms = 0;
+        }
+        else if(middle <= 0) {
+                ms = 1;
+        }
+        else{
+                ms = -middle / bound + 1;
+        }
+        // right
+        if(right > bound) {
+                rb = 1;
+        }
+        else if(right <= 0) {
+                rb = 0;
+        }
+        else{
+                rb = right / bound;
+        }
+
+        if(right > bound) {
+                rs = 0;
+        }
+        else if(right <= 0) {
+                rs = 1;
+        }
+        else{
+                rs = -right / bound + 1;
+        }
+
+        // rule 1
+        // lb, ms, rs
+        active_num = lb;
+        if(active_num > ms) active_num = ms;
+        if(active_num > rs) active_num = rs;
+        // printf("active: %f\n", active_num);
+
+        for (int i = 0; i < 40; i++) {
+                c[i] = (active_num < (40.0-i)/40.0 ? active_num : (40.0-i)/40.0);
+                // printf("%f, ", (80.0-i)/80.0);
+        }
+        // for (int i = 0; i < 80; i++) {
+        //         printf("%f, ", c[i]);
+        //         if((i + 1)%10 == 0) printf("\n");
+        // }
+        // printf("\n");
+
+        // rule 2
+        // ls, ms, rb
+        active_num = ls;
+        if(active_num > ms) active_num = ms;
+        if(active_num > rb) active_num = rb;
+        // printf("active: %f\n", active_num);
+
+        float tmp, tmp_b;
+        for (int i = 79; i >= 40; i--) {
+                c[i] = (active_num < (i-40)/40.0 ? active_num : (i-40)/40.0);
+                // c[i] = (tmp > c[i] ? tmp : c[i]);
+        }
+
+        // for (int i = 0; i < 80; i++) {
+        //         printf("%f, ", c[i]);
+        //         if((i + 1)%10 == 0) printf("\n");
+        // }
+        // printf("\n");
+
+        // rule 3
+        // ls, mb, rs
+        // active_num = ls;
+        // if(active_num > mb) active_num = mb;
+        // if(active_num > rs) active_num = rs;
+        // defuzzy
+        tmp = 0;
+        for (int i = 0; i < 80; i++) {
+                tmp += c[i];
+                tmp_b += c[i] * (i - 40);
+
+                // printf("%f x %f, ", c[i], c[i] * (i - 40));
+                // if((i + 1)%10 == 0) printf("\n");
+        }
+
+        // printnum(5,tmp_b/tmp * 10000);
+        return tmp_b/tmp;
+}
+// void cardrive(Car mycar){
+//   mycar.theta = fuzzyControl(1,1,1);
+// }
+
 void Game_Init()
 {
 
@@ -286,27 +434,28 @@ void GAME_Update()
                 Game_Init();
                 gameInitflag = 0;
         }
-        char buf[10];
-        int l,r;
-        float theta;
+        int l,r,m;
         mycar.lock = 1;
         l = sensor(mycar.x, mycar.y, (mycar.direction + 0.785398 > 6.2831 ? mycar.direction + 0.785398 - 6.2831 : (mycar.direction + 0.785398)));
         r = sensor(mycar.x, mycar.y, (mycar.direction - 0.785398 < 0 ? mycar.direction - 0.785398 + 6.2831 : (mycar.direction - 0.785398)));
+        m = sensor(mycar.x, mycar.y, mycar.direction);
+
 
         printnum(2, l);
-        printnum(3, r);
+        printnum(3, m);
+        printnum(4, r);
 
         mycar.x_old = mycar.x;
         mycar.y_old = mycar.y;
 
-        //TODO
-        theta = 0.5;
-
+        //TODO this solve compile bug.
+        int tmp = fuzzyControl(l, m, r);
         mycar.direction_old = mycar.direction;
-        mycar.direction = mycar.direction + asin(2 * sin(theta) / 36);
+        mycar.direction = mycar.direction + asinList(-tmp);
+        printnum(5, tmp);
 
-        mycar.x = mycar.x_old - (cos(theta + mycar.direction) + sin(theta) * sin(mycar.direction));
-        mycar.y = mycar.y_old + (sin(theta + mycar.direction) - sin(theta) * cos(mycar.direction));
+        mycar.x = mycar.x_old - (cos(mycar.theta + mycar.direction) + sin(mycar.theta) * sin(mycar.direction));
+        mycar.y = mycar.y_old + (sin(mycar.theta + mycar.direction) - sin(mycar.theta) * cos(mycar.direction));
         mycar.lock = 0;
 
 
