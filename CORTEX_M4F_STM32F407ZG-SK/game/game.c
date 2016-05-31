@@ -27,9 +27,9 @@ typedef struct Car {
         float direction;
         float direction_old;
         float theta;
-        uint8_t sensor_left;
-        uint8_t sensor_middle;
-        uint8_t sensor_right;
+        uint32_t sensor_left;
+        uint32_t sensor_middle;
+        uint32_t sensor_right;
         uint8_t lock;
 } Car;
 
@@ -48,7 +48,7 @@ long long one = 0x1;
 
 Car mycar = {
         .x = 45,
-        .y = 310,
+        .y = 300,
         .size = 16,
         .direction = d2radian(270)
 };
@@ -87,6 +87,16 @@ void printnum(int line, int x){
         char buf[20];
         LCD_DisplayStringLine(25 * line, itoa(x, buf));
 }
+void printnumtwo(int line, int x, int y){
+        LCD_SetColors(LCD_COLOR_GREEN, LCD_COLOR_BLACK);
+        char buf[20];
+        int i;
+        itoa(x, buf);
+        for(i = 0; buf[i] != '\0'; ++i);
+        buf[i++] = ',';
+        itoa(y, buf +i);
+        LCD_DisplayStringLine(25 * line, buf);
+}
 
 int gameInitflag = 1;
 
@@ -122,8 +132,8 @@ int sensor(uint16_t x, uint16_t y, float dir){
         int tmp_x = 0, tmp_y = 0;
 
 
-        printnum(0,x);
-        printnum(1,y);
+        // printnum(0,x);
+        // printnum(1,y);
         //printnum(2,dir*10000);
 
         if(dir <= 1.5708) {
@@ -249,7 +259,7 @@ int sensor(uint16_t x, uint16_t y, float dir){
         // printnum(5, tmp_x);
         // printnum(6, tmp_y);
         // printnum(6, min);
-        return min < 0 ? 102400:min;
+        return min < 0 ? 102400 : min;
 
 }
 
@@ -261,6 +271,8 @@ float fuzzyControl(float left, float middle, float right){
         float lb = 0, ls = 0, mb = 0, ms = 0, rb = 0, rs = 0;
         float active_num;
         float c[80] = {};
+        float tmp, tmp_b;
+
 
         // left
         if(left > bound) {
@@ -348,7 +360,6 @@ float fuzzyControl(float left, float middle, float right){
         if(active_num > rb) active_num = rb;
         // printf("active: %f\n", active_num);
 
-        float tmp, tmp_b;
         for (int i = 79; i >= 40; i--) {
                 c[i] = (active_num < (i-40)/40.0 ? active_num : (i-40)/40.0);
                 // c[i] = (tmp > c[i] ? tmp : c[i]);
@@ -372,15 +383,15 @@ float fuzzyControl(float left, float middle, float right){
                         c[i] = (tmp > c[i] ? tmp : c[i]);
                 }
                 else{
-                  tmp = (active_num < (80-i)/40.0 ? active_num : (80-i)/40.0);
-                  c[i] = (tmp > c[i] ? tmp : c[i]);
+                        tmp = (active_num < (80-i)/40.0 ? active_num : (80-i)/40.0);
+                        c[i] = (tmp > c[i] ? tmp : c[i]);
 
                 }
         }
 
 
         // defuzzy
-        tmp = 0;
+        tmp = 0, tmp_b = 0;
         for (int i = 0; i < 80; i++) {
                 tmp += c[i];
                 tmp_b += c[i] * (i - 40);
@@ -388,7 +399,11 @@ float fuzzyControl(float left, float middle, float right){
                 // printf("%f x %f, ", c[i], c[i] * (i - 40));
                 // if((i + 1)%10 == 0) printf("\n");
         }
-
+        // return 0;
+        // printnum(2, left);
+        // printnum(3, middle);
+        // printnum(4, right);
+        // vTaskDelay(10000);
         // printnum(5,tmp_b/tmp * 10000);
         return tmp_b/tmp;
 }
@@ -410,7 +425,16 @@ void Game_Init()
 void GAME_EventHandler1()
 {
         if( STM_EVAL_PBGetState( BUTTON_USER ) ) {
+                mycar.direction_old = mycar.direction;
                 mycar.direction = (mycar.direction + 0.1 > 6.2831 ? mycar.direction - 6.1831 : (mycar.direction + 0.1));
+
+                LCD_SetTextColor( LCD_COLOR_BLACK );
+                LCD_DrawCircle(mycar.x_old, mycar.y_old, mycar.size);
+                LCD_DrawUniLine(mycar.x_old, mycar.y_old, mycar.x_old - 24 * cos(mycar.direction_old), mycar.y_old + 24 * sin(mycar.direction_old));
+
+                LCD_SetTextColor( LCD_COLOR_RED );
+                LCD_DrawCircle(mycar.x, mycar.y, mycar.size);
+                LCD_DrawUniLine(mycar.x, mycar.y, mycar.x - 24 * cos(mycar.direction), mycar.y + 24 * sin(mycar.direction));
                 vTaskDelay(100);
         }
 }
@@ -418,14 +442,33 @@ void GAME_EventHandler1()
 void GAME_EventHandler2()
 {
         TP_STATE *tmp = IOE_TP_GetState();
-        if( tmp->TouchDetected && tmp->X < 220 && tmp->Y < 300 && tmp->X > 20 && tmp->Y > 20) {
-                // mycar.x += 1;
-                mycar.x = tmp->X;
-                mycar.y = tmp->Y;
-                printnum(0, tmp->X);
-                printnum(1, tmp->Y);
-                vTaskDelay(20);
 
+        if( tmp->TouchDetected && tmp->X < 220 && tmp->Y < 300 && tmp->X > 20 && tmp->Y > 20) {
+                if(tmp->TouchDetected && tmp->X < 170 && tmp->Y < 170) {
+                        mycar.lock  = !mycar.lock;
+                        vTaskDelay(100);
+                }
+                else{
+
+                        // mycar.x += 1;
+                        mycar.lock = 1;
+                        mycar.x_old = mycar.x;
+                        mycar.y_old = mycar.y;
+
+                        mycar.x = tmp->X;
+                        mycar.y = tmp->Y;
+                        LCD_SetTextColor( LCD_COLOR_BLACK );
+                        LCD_DrawCircle(mycar.x_old, mycar.y_old, mycar.size);
+                        LCD_DrawUniLine(mycar.x_old, mycar.y_old, mycar.x_old - 24 * cos(mycar.direction_old), mycar.y_old + 24 * sin(mycar.direction_old));
+
+                        LCD_SetTextColor( LCD_COLOR_RED );
+                        LCD_DrawCircle(mycar.x, mycar.y, mycar.size);
+                        LCD_DrawUniLine(mycar.x, mycar.y, mycar.x - 24 * cos(mycar.direction), mycar.y + 24 * sin(mycar.direction));
+                        mycar.lock = 0;
+                        // printnum(0, tmp->X);
+                        // printnum(1, tmp->Y);
+                        vTaskDelay(20);
+                }
 
         }
 }
@@ -437,35 +480,39 @@ void GAME_EventHandler3()
         // }
 }
 
-void GAME_Update()
+void volatile GAME_Update()
 {
         if(gameInitflag) {
                 Game_Init();
                 gameInitflag = 0;
         }
-        int l,r,m;
-        mycar.lock = 1;
-        l = sensor(mycar.x, mycar.y, (mycar.direction + 0.785398 > 6.2831 ? mycar.direction + 0.785398 - 6.2831 : (mycar.direction + 0.785398)));
-        r = sensor(mycar.x, mycar.y, (mycar.direction - 0.785398 < 0 ? mycar.direction - 0.785398 + 6.2831 : (mycar.direction - 0.785398)));
-        m = sensor(mycar.x, mycar.y, mycar.direction);
+        if(!mycar.lock) {
+                mycar.lock = 1;
+                mycar.sensor_left = (float)sensor(mycar.x, mycar.y, (mycar.direction + 0.785398 > 6.2831 ? mycar.direction + 0.785398 - 6.2831 : (mycar.direction + 0.785398)));
+                mycar.sensor_right = sensor(mycar.x, mycar.y, (mycar.direction - 0.785398 < 0 ? mycar.direction - 0.785398 + 6.2831 : (mycar.direction - 0.785398)));
+                mycar.sensor_middle = sensor(mycar.x, mycar.y, mycar.direction);
 
+                printnumtwo(0, mycar.x, mycar.y);
+                // printnumtwo(2, mycar.sensor_left, mycar.sensor_left);
+                // int(mycar.sensor_left);
+                printnum(2, mycar.sensor_left);
+                printnum(3, mycar.sensor_middle);
+                printnum(4, mycar.sensor_right);
+                mycar.sensor_left;
 
-        printnum(2, l);
-        printnum(3, m);
-        printnum(4, r);
+                mycar.x_old = mycar.x;
+                mycar.y_old = mycar.y;
+                int tmp = fuzzyControl(mycar.sensor_left, mycar.sensor_middle, mycar.sensor_right);
+                printnum(1, tmp);
+                //TODO this solve compile bug.
+                mycar.direction_old = mycar.direction;
+                mycar.direction = mycar.direction + asinList(-tmp);
+                // printnum(5, tmp);
 
-        mycar.x_old = mycar.x;
-        mycar.y_old = mycar.y;
-
-        //TODO this solve compile bug.
-        int tmp = fuzzyControl(l, m, r);
-        mycar.direction_old = mycar.direction;
-        mycar.direction = mycar.direction + asinList(-tmp);
-        printnum(5, tmp);
-
-        mycar.x = mycar.x_old - (cos(mycar.theta + mycar.direction) + sin(mycar.theta) * sin(mycar.direction));
-        mycar.y = mycar.y_old + (sin(mycar.theta + mycar.direction) - sin(mycar.theta) * cos(mycar.direction));
-        mycar.lock = 0;
+                mycar.x = mycar.x_old - (cos(mycar.theta + mycar.direction) + sin(mycar.theta) * sin(mycar.direction));
+                mycar.y = mycar.y_old + (sin(mycar.theta + mycar.direction) - sin(mycar.theta) * cos(mycar.direction));
+                mycar.lock = 0;
+        }
 
 
 }
@@ -473,7 +520,7 @@ void GAME_Update()
 void GAME_Render()
 {
 
-        if(~mycar.lock) {
+        if(!mycar.lock) {
 
                 LCD_SetTextColor( LCD_COLOR_BLACK );
                 LCD_DrawCircle(mycar.x_old, mycar.y_old, mycar.size);

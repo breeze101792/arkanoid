@@ -64,14 +64,14 @@ prvInit()
 	//LED
 	STM_EVAL_LEDInit( LED3 );
 }
-/*
+
 static void GameEventTask1( void *pvParameters )
 {
 	while( 1 ){
 		GAME_EventHandler1();
 	}
 }
-*/
+
 static void GameEventTask2( void *pvParameters )
 {
 	while( 1 ){
@@ -106,9 +106,9 @@ int main(void)
 		demoMode = 1;
 
 	xTaskCreate( GameTask, (signed char*) "GameTask", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
-//	xTaskCreate( GameEventTask1, (signed char*) "GameEventTask1", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
+	xTaskCreate( GameEventTask1, (signed char*) "GameEventTask1", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
 	xTaskCreate( GameEventTask2, (signed char*) "GameEventTask2", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
-	xTaskCreate( GameEventTask3, (signed char*) "GameEventTask3", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
+	// xTaskCreate( GameEventTask3, (signed char*) "GameEventTask3", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
 
 	//Call Scheduler
 	vTaskStartScheduler();
